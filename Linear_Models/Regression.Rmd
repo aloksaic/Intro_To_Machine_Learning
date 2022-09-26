@@ -1,0 +1,157 @@
+---
+title: 'Regression'
+author: 'Alekhya Pinnamaneni and Aloksai Choudari'
+date: 'September 25, 2022'
+output: 
+  pdf_document: default
+  html_document:
+    df_print: paged
+editor_options:
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### How does linear regression work?
+Linear regression essentially aims to create an accurate model of the relationship between two variables based on provided data. Linear regression fits a straight line to the data while trying to minimize the gap between the line and the actual data points, or the residual sum of squares (RSS). The lower this value is, the more accurate the linear model is. Linear regression makes it straightforward and simple to create and understand a model for any set of data. It also prevents overfitting, which is a problem that occurs when a model is so closely fit to a data set that it becomes unusable for other data sets. However, linear regression can also be too simple for some data sets. If a data set has one outlier, it can completely throw off the linear model making it much less accurate. Linear regression can be very useful for some data sets, but it is important to evaluate a data set to determine which type of model will be the most accurate.
+
+### Select a data set
+Data set: Metro Interstate Traffic Volume Data
+
+Source: <https://archive.ics.uci.edu/ml/datasets/Metro+Interstate+Traffic+Volume>
+
+Target column: 'traffic_volume'
+
+No. of rows: 48,205 rows
+
+### Load the data
+```{r}
+traffic <- read.csv("traffic.csv")
+```
+
+### Split the data into train and test data
+```{r}
+set.seed(1234)
+sample <- sample(1:nrow(traffic), nrow(traffic)*0.8, replace=FALSE)
+train <- traffic[sample,]
+test <- traffic[-sample,]
+```
+
+### Data exploration on the train data
+```{r}
+attach(train)
+
+# Prints the first 10 rows of the train data for traffic
+head(train, n=10)
+
+# Prints the mean of the temperature in kelvin
+mean(temp)
+
+# Prints the most common weather condition
+names(which.max(table(weather_main)))
+
+# Prints all the holidays
+unique(holiday)
+
+# Prints smallest and largest amount of hourly rain in mm
+range(rain_1h)
+
+# Print the median percentage of cloud cover
+median(clouds_all)
+
+# Prints statistics for hourly traffic volume
+summary(traffic_volume)
+```
+
+### Informative graphs of train data
+```{r}
+# Removes rows with missing temperature data
+train <- train[train$temp != 0, ]
+# Creates a scatterplot of temperature vs. traffic volume
+plot(train$temp, train$traffic_volume, pch='+', cex=0.75, col="blue", xlab="Temperature (kelvin)", ylab="Hourly Traffic Volume")
+```
+```{r, warning=FALSE}
+# Creates a boxplot of the traffic volume based on the weather condition
+boxplot(train$traffic_volume~train$weather_main, varwidth=TRUE, notch=TRUE, xlab="Weather condition", ylab="Hourly Traffic Volume", las=2)
+```
+
+### Simple linear regression model of train data
+```{r}
+lm <- lm(traffic_volume~temp, data=train)
+lm
+
+# Output the summary of the model
+summary(lm)
+```
+
+The residuals part of the summary displays information about the difference between the traffic volume predicted by the model and the actual traffic volume. We can see that the median difference between the predicted and actual traffic volumes is 86.7. The residual standard error shows how well a regression model fits the data. The smaller the residual standard error, the more accurate the model is. The residual standard error is fairly large for this model, indicating that the model underfits the data. R-squared represents the proportion of variance of y that can be explained by x in the model. In this case, that means that 1.68% of the variance in traffic volume can be explained by temperature in this model. This means that temperature is not the best predictor of traffic volume and that this model is not the best fit. The F-statistic shows how much the data varies from the mean. The F-statistic is very large in this case, meaning that the data differs largely from the mean.
+
+```{r}
+# Plot the residuals of the model
+par(mfrow=c(2,2))
+plot(lm)
+```
+
+### Multiple linear regression model of train data
+```{r}
+lm2 <- lm(traffic_volume~temp+clouds_all, data=train)
+lm2
+
+# Output the summary of the model
+summary(lm2)
+
+# Plot the residuals of the model
+par(mfrow=c(2,2))
+plot(lm2)
+```
+
+### Third linear regression model of train data
+```{r}
+lm3 <- lm(traffic_volume~temp+clouds_all+rain_1h+snow_1h, data=train)
+lm3
+
+# Output the summary of the model
+summary(lm3)
+
+# Plot the residuals of the model
+par(mfrow=c(2,2))
+plot(lm3)
+```
+
+### Which model is the best?
+The second model is the best based on the summaries of the three models. The residual standard error is the smallest in the second model compared to the other two. This means that the difference between the predicted and actual target is smaller in the second model. Therefore, the second regression model fits the data set the most accurately. The second model also has the larged R-squared value out of the three regression models. This means that this model predicts the target value the most accurately out of the three models.
+
+### Predict and evaluate on the test data
+#### Model 1
+```{r}
+pred <- predict(lm, newdata=test)
+cor <- cor(pred, test$traffic_volume)
+mse <- mean((pred-test$traffic_volume)^2) 
+rmse <- sqrt(mse)
+print(paste('correlation:', cor))
+print(paste('mse:', mse))
+print(paste('rmse:', rmse))
+```
+#### Model 2
+```{r}
+pred2 <- predict(lm2, newdata=test)
+cor2 <- cor(pred2, test$traffic_volume)
+mse2 <- mean((pred2-test$traffic_volume)^2) 
+rmse2 <- sqrt(mse2)
+print(paste('correlation:', cor2))
+print(paste('mse:', mse2))
+print(paste('rmse:', rmse2))
+```
+#### Model 3
+```{r}
+pred3 <- predict(lm3, newdata=test)
+cor3 <- cor(pred3, test$traffic_volume)
+mse3 <- mean((pred3-test$traffic_volume)^2) 
+rmse3 <- sqrt(mse3)
+print(paste('correlation:', cor3))
+print(paste('mse:', mse3))
+print(paste('rmse:', rmse3))
+```
+Model 2 has the highest correlation. This can probably be explained by the lower residual standard error value of model 2, which indicates a better-fitting model.

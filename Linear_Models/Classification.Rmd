@@ -1,0 +1,163 @@
+---
+title: 'Classification'
+author: 'Alekhya Pinnamaneni and Aloksai Choudari'
+date: 'September 25, 2022'
+output: 
+  pdf_document: default
+  html_document:
+    df_print: paged
+editor_options:
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### How do linear models for classification work?
+Linear models for classification create boundaries for decisions, which separate the observations into different categories that are of the same class. The decision boundaries in classification are linear combinations of different parameters for each side of the boundary. Strengths for these linear models include: the ability to add new data and update the graph with an easier approach, better probabilistic interpretations, and the avoidance of overfitting with algorithms. A few weaknesses for linear models in classification are: tendencies to fail with an increase in non-linear decision boundaries and less flexibility to adopt relationships as they get more complex.
+
+### Select a dataset
+Data set: Adult Data Set
+
+Source: <https://archive.ics.uci.edu/ml/datasets/Adult>
+
+Target column: 'predicted_salary_range'
+
+No. of rows: 48,842 rows
+
+### Load the data
+```{r}
+adult <- read.csv("adult.data", header=FALSE)
+
+# Adds columns names to the data table
+colnames(adult) <- c('age', 'workclass', 'fnlwgt', 'education', 'education_num', 'marital_status', 'occupation', 'relationship', 'race', 'sex', 'capital_gain', 'capital_loss', 'hours_per_week', 'native_country', 'predicted_salary_range')
+```
+
+### Data Cleaning
+```{r}
+# Changes the character values in the predicted_salary_range column to integer values
+adult$predicted_salary_range[adult$predicted_salary_range == " <=50K"] <- "0"
+adult$predicted_salary_range[adult$predicted_salary_range == " >50K"] <- "1"
+adult$predicted_salary_range <- as.integer(adult$predicted_salary_range)
+```
+
+### Split data into train and test data
+```{r}
+set.seed(1234)
+sample <- sample(1:nrow(adult), nrow(adult)*0.8, replace=FALSE)
+train <- adult[sample,]
+test <- adult[-sample,]
+```
+
+### Data exploration on the train data
+```{r}
+attach(train)
+
+# Prints the first 10 rows of the train data for adults
+head(train, n=10)
+
+# Prints the mean of education_num
+mean(education_num)
+
+# Prints the median of hours worked per week for adults
+median(hours_per_week)
+
+# Prints the smallest and largest capital_gain across the adults
+range(capital_gain)
+
+# Prints statistics for the age across the adults data
+summary(age)
+```
+
+### Informative graphs of train data
+```{r}
+# Scatterplot of education level vs. hours worked per week
+plot(train$education_num, train$hours_per_week, pch='+', cex=0.75, col="blue", xlab="Education Level", ylab="Hours Worked per Week")
+
+# Boxplot of hours worked per week based on sex
+boxplot(train$hours_per_week~train$sex, varwidth=TRUE, notch=TRUE, xlab="Sex", ylab="Hours Worked per Week", las=2)
+```
+
+### Logistic regression model of train data
+```{r}
+glm1 <- glm(predicted_salary_range~education_num, data=train)
+glm1
+
+# Outputs the summary of the model
+summary(glm1)
+```
+
+The residual deviance in the model summary shows how well the predicted_salary_range can be predicted by the model with education_num as the predictor variable. AIC is a measure of how well-fit the model is to the data set. A lower AIC value indiciates a better-fitting model. The AIC value for this model is fairly large, meaning this model is underfit for the data.
+
+### Naive Bayes Model
+```{r}
+#install.packages('e1071', dependencies=TRUE)
+library(e1071)
+nb <- naiveBayes(predicted_salary_range~., data=train)
+nb
+```
+
+The data above displays the probability of each result (salary <= 50K or salary > 50K) based on the value of each attribute.
+
+### Predict and evaluate on the test data
+#### Logistic Regression Model
+```{r}
+probs <- predict(glm1, newdata=test, type="response")
+pred <- ifelse(probs>0.5, 2, 1)
+
+# Calculate accuracy
+acc1 <- mean(pred==as.integer(test$predicted_salary_range))
+print(paste("accuracy = ", acc1))
+
+# Table of predictions and true values
+tab <- table(pred, as.integer(test$predicted_salary_range))
+tab
+
+TP <- tab[1, 1]
+FN <- tab[2, 1]
+TN <- tab[2, 2]
+FP <- tab[1, 2]
+
+# Sensitivity
+sens <- TP / (TP + FN)
+print(paste("sensitivity = ", sens))
+
+# Specificity
+spec <- TN / (TN + FP)
+print(paste("specificity = ", spec))
+```
+
+#### Naive Bayes Model
+```{r}
+p1 <- predict(nb, newdata=test, type="class")
+
+# Calculate accuracy
+acc2 <- mean(p1==(test$predicted_salary_range))
+print(paste("accuracy = ", acc2))
+
+# Table of predictions and true values
+tab2 <- table(p1, test$predicted_salary_range)
+tab2
+
+TP2 <- tab2[1, 1]
+FN2 <- tab2[2, 1]
+TN2 <- tab2[2, 2]
+FP2 <- tab2[1, 2]
+
+# Sensitivity
+sens2 <- TP2 / (TP2 + FN2)
+print(paste("sensitivity = ", sens2))
+
+# Specificity
+spec2 <- TN2 / (TN2 + FP2)
+print(paste("specificity = ", spec2))
+```
+
+The naive bayes model has a much higher accuracy rate compared to the logistic regression model. This can be explained by the fact that the naive bayes model uses all attributes as predictors to make a more accurate prediction of the target variable (predicted_salary_range).
+
+### Strengths and weaknesses of Naive Bayes and Logistic Regression
+Logistic regression is accurate for simpler, more linear data sets. However, it can only be useful for data sets that follow a linear trend. The naive bayes algorithm computes a model quickly in a short amount of time. However, the model assumes that all predictor attributes are independent of each other, which is rarely true.
+
+### Classification metrics
+The most common and simplest classification metric is accuracy. This represents the proportion of predictions made by the model that are accurate. Sensitivity measures the rate of true positives. Specificity measures the rate of true negatives.
