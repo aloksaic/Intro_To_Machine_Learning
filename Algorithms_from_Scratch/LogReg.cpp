@@ -1,5 +1,5 @@
 // Portfolio 3: ML Algorithms From Scratch
-// Aloksai Choudari and Alekhya Pinnamaneni
+// Alekhya Pinnamaneni and Aloksai Choudari
 // CS 4375.003
 
 #include <iostream>
