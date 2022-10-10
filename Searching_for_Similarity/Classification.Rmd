@@ -1,0 +1,113 @@
+---
+title: "Classification"
+author: "Aloksai Choudari, Alekhya Pinnamaneni"
+date: "2022-10-08"
+output: 
+  pdf_document: default
+  html_document:
+    df_print: paged
+editor_options:
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Select a dataset
+Data set: Adults
+
+Source: <https://archive.ics.uci.edu/ml/datasets/Adult>
+
+### Load in the data
+```{r}
+adult <- read.csv("adult.data", header=FALSE)
+
+# Adds columns names to the data table
+colnames(adult) <- c('age', 'workclass', 'fnlwgt', 'education', 'education_num', 'marital_status', 'occupation', 'relationship', 'race', 'sex', 'capital_gain', 'capital_loss', 'hours_per_week', 'native_country', 'predicted_salary_range')
+```
+
+### Data Cleaning
+```{r}
+# Changes the character columns to numeric columns
+adult$workclass <- as.numeric(as.integer(factor(adult$workclass)))
+adult$education <- as.numeric(as.integer(factor(adult$education)))
+adult$marital_status <- as.numeric(as.integer(factor(adult$marital_status)))
+adult$occupation <- as.numeric(as.integer(factor(adult$occupation)))
+adult$relationship <- as.numeric(as.integer(factor(adult$relationship)))
+adult$race <- as.numeric(as.integer(factor(adult$race)))
+adult$sex <- as.numeric(as.integer(factor(adult$sex)))
+adult$native_country <- as.numeric(as.integer(factor(adult$native_country)))
+adult$predicted_salary_range <- as.numeric(as.integer(factor(adult$predicted_salary_range)))
+```
+
+### Split data into train and test data
+```{r}
+set.seed(1234)
+sample <- sample(1:nrow(adult), nrow(adult)*0.8, replace=FALSE)
+train <- adult[sample,]
+test <- adult[-sample,]
+```
+
+### Explore the training data statistically and graphically
+```{r}
+# Prints the first 10 rows of the train data for adults
+head(train, n=10)
+
+# Prints the mean of education_num
+mean(train$education_num)
+
+# Prints the median of hours worked per week for adults
+median(train$hours_per_week)
+
+# Prints the smallest and largest capital_gain across the adults
+range(train$capital_gain)
+
+# Prints statistics for the age across the adults data
+summary(train$age)
+
+# Scatterplot of education level vs. hours worked per week
+plot(train$education_num, train$hours_per_week, pch='+', cex=0.75, col="blue", xlab="Education Level", ylab="Hours Worked per Week")
+
+# Boxplot of hours worked per week based on sex
+boxplot(train$hours_per_week~train$sex, varwidth=TRUE, notch=TRUE, xlab="Sex", ylab="Hours Worked per Week", las=2)
+```
+
+### Perform Logistic Regression
+```{r}
+# Find model
+glm1 <- glm(predicted_salary_range~education_num, data=train)
+# Predict results
+probs <- predict(glm1, newdata=test, type="response")
+pred <- ifelse(probs>1.5, 2, 1)
+# Calculate accuracy of results
+acc <- mean(pred==as.integer(test$predicted_salary_range))
+print(paste("accuracy = ", acc))
+```
+
+### Perform kNN for Classification
+```{r}
+library(class)
+# Find model
+knn1 <- knn(train=train[, 1:14], test=test[, 1:14], cl=train[, 15], k=3)
+# Predict results
+results2 <- knn1 == test[, 15]
+# Calculate accuracy of results
+acc2 <- length(which(results2==TRUE)) / length(results2)
+print(paste("accuracy = ", acc2))
+```
+
+### Perform Decision trees
+```{r}
+library(tree)
+# Find model
+tree1 <- tree(as.factor(predicted_salary_range)~., data=train)
+# Predict results
+pred2 <- predict(tree1, newdata=test, type="class")
+# Calculate accuracy of results
+acc3 <- mean(pred == test$predicted_salary_range)
+print(paste("accuracy = ", acc3))
+```
+
+### Analysis
+The logistic regression algorithm had the same accuracy as the decision trees algorithm. The decision tree algorithm involves splitting the observations into smaller and smaller partitions until the observations in a group are similar. Meanwhile, logistic regression uses methods like gradient descent to iteratively find the most optimal linear model. Since both of these algorithms involve taking increasingly smaller steps towards the most optimal solution, it is understandable as to why they have the same accuracy. However, the kNN algorithm had a slightly lower accuracy than the logistic regression and decision tree algorithms. This can be explained by the fact that the kNN algorithm takes a more indirect approach by predicting the class of a data instance based on its neighbors' classes. This explains why the kNN aglorithm had a slightly lower accuracy.

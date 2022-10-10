@@ -1,0 +1,71 @@
+---
+title: 'Dimensionality Reduction'
+author: 'Alekhya Pinnamaneni and Aloksai Choudari'
+date: 'October 9, 2022'
+output: 
+  pdf_document: default
+  html_document:
+    df_print: paged
+editor_options:
+  chunk_output_type: inline
+---
+
+### Select a data set
+Data set: Metro Interstate Traffic Volume Data
+
+Source: <https://archive.ics.uci.edu/ml/datasets/Metro+Interstate+Traffic+Volume>
+
+Target column: 'traffic_volume'
+
+No. of rows: 48,205 rows
+
+### Load the data
+```{r}
+traffic <- read.csv("traffic.csv")
+```
+
+### Clean the data
+```{r}
+traffic$holiday <- as.numeric(as.integer(factor(traffic$holiday)))
+traffic$temp <- as.numeric(as.integer(factor(traffic$temp)))
+traffic$rain_1h <- as.numeric(as.integer(factor(traffic$rain_1h)))
+traffic$snow_1h <- as.numeric(as.integer(factor(traffic$snow_1h)))
+traffic$clouds_all <- as.numeric(as.integer(factor(traffic$clouds_all)))
+traffic$weather_main <- as.numeric(as.integer(factor(traffic$weather_main)))
+traffic$weather_description <- as.numeric(as.integer(factor(traffic$weather_description)))
+traffic$date_time <- as.numeric(as.integer(factor(traffic$date_time)))
+traffic$traffic_volume <- as.numeric(as.integer(factor(traffic$traffic_volume)))
+```
+
+### Split the data into train and test data
+```{r}
+set.seed(1234)
+sample <- sample(1:nrow(traffic), nrow(traffic)*0.8, replace=FALSE)
+train <- traffic[sample,]
+test <- traffic[-sample,]
+```
+
+### PCA Dimensionality Reduction
+```{r}
+library(caret)
+
+pca_out <- preProcess(train[,1:4], method=c("center", "scale", "pca"))
+pca_out
+```
+
+### LDA Dimensionality Reduction
+
+```{r}
+library(MASS)
+lda1 <- lda(temp~., data=train)
+```
+
+```{r}
+lda_pred <- predict(lda1, newdata=test, type="class")
+lda_pred$class
+mean(lda_pred$class==test$temp)
+```
+
+### Analysis
+
+Upon reduction of the data, a quite a bit of accuracy was lost. After PCA, the accuracy was similar as seen to the results in Notebook 1 - regression, but after LCA there was a significant decrease in accuracy. 

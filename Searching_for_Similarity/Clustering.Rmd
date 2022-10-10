@@ -1,0 +1,62 @@
+---
+title: "Clustering"
+author: "Aloksai Choudari, Alekhya Pinnamaneni"
+date: "2022-10-09"
+output: 
+  pdf_document: default
+  html_document:
+    df_print: paged
+editor_options:
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Select a data set
+Data set: Adults
+
+Source: <https://archive.ics.uci.edu/ml/datasets/Adult>
+
+### Load in the data
+```{r}
+adult <- read.csv("adult.data", header=FALSE)
+
+# Adds columns names to the data table
+colnames(adult) <- c('age', 'workclass', 'fnlwgt', 'education', 'education_num', 'marital_status', 'occupation', 'relationship', 'race', 'sex', 'capital_gain', 'capital_loss', 'hours_per_week', 'native_country', 'predicted_salary_range')
+```
+
+### Data Cleaning
+```{r}
+# Changes the character columns to numeric columns
+adult$workclass <- as.numeric(as.integer(factor(adult$workclass)))
+adult$education <- as.numeric(as.integer(factor(adult$education)))
+adult$marital_status <- as.numeric(as.integer(factor(adult$marital_status)))
+adult$occupation <- as.numeric(as.integer(factor(adult$occupation)))
+adult$relationship <- as.numeric(as.integer(factor(adult$relationship)))
+adult$race <- as.numeric(as.integer(factor(adult$race)))
+adult$sex <- as.numeric(as.integer(factor(adult$sex)))
+adult$native_country <- as.numeric(as.integer(factor(adult$native_country)))
+adult$predicted_salary_range <- as.numeric(as.integer(factor(adult$predicted_salary_range)))
+```
+
+### kMeans clustering
+```{r}
+library(datasets)
+set.seed(1234)
+cluster <- kmeans(adult[, 1:14], 2, nstart=20)
+acc <- mean(cluster$cluster == adult$predicted_salary_range)
+print(paste("accuracy = ", acc))
+```
+
+### Model Based Clustering
+```{r}
+library(mclust)
+cluster2 <- Mclust(adult)
+acc2 <- mean(cluster2$classification == adult$predicted_salary_range)
+print(paste("accuracy = ", acc2))
+```
+
+### Analysis
+The kMeans clustering algorithm had a slightly higher accuracy than the model based clustering algorithm. This difference can be explained by the iterative nature of the kMeans clustering algorithm. This algorithm iteratively assigns observations to the closest centroids and recalculates after each assignment. This results in a more accurate assignment of the data into clusters. The hierarchical clustering algorithm on the other hand has a bottom-up approach, which results in slightly less accurate results.

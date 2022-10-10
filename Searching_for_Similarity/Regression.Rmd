@@ -1,0 +1,175 @@
+---
+title: 'Regression'
+author: 'Alekhya Pinnamaneni and Aloksai Choudari'
+date: 'October 6, 2022'
+output: 
+  pdf_document: default
+  html_document:
+    df_print: paged
+editor_options:
+  chunk_output_type: inline
+---
+
+### Select a data set
+Data set: Metro Interstate Traffic Volume Data
+
+Source: <https://archive.ics.uci.edu/ml/datasets/Metro+Interstate+Traffic+Volume>
+
+Target column: 'traffic_volume'
+
+No. of rows: 48,205 rows
+
+### Load the data
+```{r}
+traffic <- read.csv("traffic.csv")
+```
+
+### Clean the data
+```{r}
+traffic$holiday <- as.numeric(as.integer(factor(traffic$holiday)))
+traffic$temp <- as.numeric(as.integer(factor(traffic$temp)))
+traffic$rain_1h <- as.numeric(as.integer(factor(traffic$rain_1h)))
+traffic$snow_1h <- as.numeric(as.integer(factor(traffic$snow_1h)))
+traffic$clouds_all <- as.numeric(as.integer(factor(traffic$clouds_all)))
+traffic$weather_main <- as.numeric(as.integer(factor(traffic$weather_main)))
+traffic$weather_description <- as.numeric(as.integer(factor(traffic$weather_description)))
+traffic$date_time <- as.numeric(as.integer(factor(traffic$date_time)))
+traffic$traffic_volume <- as.numeric(as.integer(factor(traffic$traffic_volume)))
+```
+
+### Split the data into train and test data
+```{r}
+set.seed(1234)
+sample <- sample(1:nrow(traffic), nrow(traffic)*0.8, replace=FALSE)
+train <- traffic[sample,]
+test <- traffic[-sample,]
+```
+
+### Statistical and graphical data exploration
+```{r}
+attach(train)
+
+# Prints the most common weather condition and the most common weather description
+names(which.max(table(weather_main)))
+names(which.max(table(weather_description)))
+
+# Prints all the holidays
+unique(holiday)
+
+# Prints the smallest and largest amount of hourly rain and hourly snow in mm
+range(rain_1h)
+range(snow_1h)
+
+# Prints statistics for temperature (in kelvins), cloud coverage, and hourly traffic volume
+summary(temp)
+summary(clouds_all)
+summary(traffic_volume)
+```
+```{r}
+# Removes rows with missing temperature data
+train <- train[train$temp != 0, ]
+
+# Creates a scatter plot of temperature vs. traffic volume
+plot(train$temp, train$traffic_volume, pch='+', cex=0.75, col="blue", xlab="Temperature (kelvin)", ylab="Hourly Traffic Volume")
+```
+```{r, warning=FALSE}
+# Creates a box plot of the traffic volume based on the weather condition
+boxplot(train$traffic_volume~train$weather_main, varwidth=TRUE, notch=TRUE, xlab="Weather Condition", ylab="Hourly Traffic Volume", las=2)
+```
+
+Here is a linear model using all of the numeric predictors from the data file.
+
+### Linear regression
+```{r}
+lm1 <- lm(traffic_volume~.-(date_time+weather_description+weather_main+holiday), data=train)
+
+# Output the summary of the model
+summary(lm1)
+```
+
+The results from lm1 indicated that temp and clouds_all are the significant predictors out of all of the numeric predictors. Using these two predictors, here is another linear model.
+
+```{r}
+lm2 <- lm(traffic_volume~temp+clouds_all, data=train)
+pred <- predict(lm2, newdata=test)
+cor_lm <- cor(pred, test$traffic_volume)
+mse_lm <- mean((pred - test$traffic_volume)^2)
+print(paste("cor=", cor_lm))
+print(paste("mse=", mse_lm))
+```
+
+### kNN regression
+
+##### Before scaling data
+```{r, warning=FALSE}
+library(caret)
+
+# fit the model
+fit <- knnreg(train[,2:8],train[,1],k=3)
+
+# evaluate
+pred2 <- predict(fit, test[,2:8])
+cor_knn1 <- cor(pred2, test$traffic_volume)
+mse_knn1 <- mean((pred2 - test$traffic_volume)^2)
+print(paste("cor=", cor_knn1))
+print(paste("mse=", mse_knn1))
+```
+
+These are the results of the correlation and mean squared error for kNN regression before scaling the data.
+
+##### Scale the data
+```{r}
+train_scaled <- train[, 2:8]  # omit name and don't scale mpg
+means <- sapply(train_scaled, mean)
+stdvs <- sapply(train_scaled, sd)
+train_scaled <- scale(train_scaled, center=means, scale=stdvs)
+test_scaled <- scale(test[, 2:8], center=means, scale=stdvs)
+```
+
+##### After scaling data
+```{r}
+fit <- knnreg(train_scaled, train$traffic_volume, k=3)
+pred3 <- predict(fit, test_scaled)
+cor_knn2 <- cor(pred3, test$traffic_volume)
+mse_knn2 <- mean((pred3 - test$traffic_volume)^2)
+print(paste("cor=", cor_knn2))
+print(paste("mse=", mse_knn2))
+```
+
+These are the results of the correlation and mean squared error for kNN regression before scaling the data. As seen above, the correlation was much higher and the mean squared error was much lower, using kNN, after scaling the data.
+
+### Decision tree regression
+
+##### Using unpruned tree
+```{r}
+library(tree)
+tree1 <- tree(temp~., data=train)
+summary(tree1)
+pred <- predict(tree1, newdata=test)
+print(paste("cor=", cor(pred, test$temp)))
+rmse_tree <- sqrt(mean((pred-test$temp)^2))
+print(paste("rmse=", rmse_tree))
+plot(tree1)
+text(tree1, cex=0.5, pretty=0)
+```
+
+This is the decision tree, correlation, and root mean squared error for the unpruned tree of the data. As seen, the results are much better than the kNN regression and linear regression, shown previously.
+
+##### Testing pruned tree
+```{r}
+library(tree)
+tree_pruned <- prune.tree(tree1, best=5)
+summary(tree_pruned)
+pred <- predict(tree_pruned, newdata=test)
+print(paste("cor=", cor(pred, test$temp)))
+rmse_tree <- sqrt(mean((pred-test$temp)^2))
+print(paste("rmse=", rmse_tree))
+plot(tree_pruned)
+text(tree_pruned, cex=0.5, pretty=0)
+```
+
+After the tree is pruned to 5 terminal nodes, this is the plot, correlation, and root mean squared error of the pruned tree. Although the results are not as good as the unpruned tree, they are still much higher than the kNN regression and linear regression results.
+
+### Analysis
+
+The results for Decision tree regression were much better than kNN regression and linear regression shown in above. This is because decision trees support non-linear solutions, while linear regression is best performed on solely linear data sets. In this case, the decision tree has better accuracy than the linear regression results. Similarly, kNN regression is slower and more inaccurate than the decision tree method because decision tree regression better supports multi-variable regression.
