@@ -1,0 +1,118 @@
+---
+title: "Classification"
+author: "Aloksai Choudari, Alekhya Pinnamaneni"
+date: "2022-10-19"
+output: 
+  pdf_document: default
+  html_document:
+    df_print: paged
+editor_options:
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Select a data set
+Data set: Avila Data Set
+
+Source: <https://archive.ics.uci.edu/ml/datasets/Avila>
+
+Attributes:
+intercolumnar_dist, upper_margin, lower_margin, exploitation, row_no, modular_ratio, interlinear_spacing, weight, peak_no, ratio_spacing, copyist
+
+No. of instances (rows): 10,430 rows
+
+## Load the data
+```{r}
+avila <- read.csv("avila-tr.txt", header = FALSE)
+```
+
+## Clean the data
+```{r}
+# Add column names to the data set
+colnames(avila) <- c("intercolumnar_dist", "upper_margin", "lower_margin", "exploitation", "row_no", "modular_ratio", "interlinear_spacing", "weight", "peak_no", "ratio_spacing", "copyist")
+
+# Factor the copyist column
+avila$copyist <- as.factor(avila$copyist)
+```
+
+## Divide data into train, test, and validate sets
+```{r}
+set.seed(1234)
+spec <- c(train=.7, test=.2, validate=.1)
+i <- sample(cut(1:nrow(avila),
+                nrow(avila)*cumsum(c(0,spec)), labels=names(spec)))
+train <- avila[i=="train",]
+test <- avila[i=="test",]
+val <- avila[i=="validate",]
+```
+
+## Explore the data statistically and graphically
+```{r}
+# Outputs the first 5 rows of the train data
+head(train, n=5)
+
+# Outputs the mean intercolumnar distance
+mean(train$intercolumnar_dist)
+
+# Outputs the lowest and highest upper margin
+range(train$upper_margin)
+
+# Outputs the most common class for the copyist column
+names(which.max(table(train$copyist)))
+
+# Outputs the median weight
+median(train$weight)
+
+# Outputs the mean exploitation
+mean(train$exploitation)
+
+# Outputs statistics for ratio spacing
+summary(train$ratio_spacing)
+```
+
+```{r}
+# Outputs a scatterplot of modular ratio vs. ratio spacing
+plot(train$modular_ratio, train$ratio_spacing, pch='+', cex=0.75, col="blue", xlab="Modular Ratio", ylab="Ratio Spacing")
+```
+
+```{r}
+# Outputs a conditional density plot showing how the copyist changes over the various ratio spacings
+cdplot(train$ratio_spacing, train$copyist)
+```
+
+## SVM Classification
+
+### Linear Kernel
+```{r}
+library(e1071)
+library(MASS)
+svm1 <- tune(svm, copyist~., data=val, kernel="linear", ranges=list(cost=c(0.1, 1, 10)))
+summary(svm1)
+pred1 <- predict(svm1$best.model, newdata=test)
+acc1 <- mean(pred1==test$copyist)
+print(paste("accuracy = ", acc1))
+```
+
+### Polynomial Kernel
+```{r}
+svm2 <- tune(svm, copyist~., data=val, kernel="polynomial", ranges=list(cost=c(10, 100, 150)))
+summary(svm2)
+pred2 <- predict(svm2$best.model, newdata=test)
+acc2 <- mean(pred2==test$copyist)
+print(paste("accuracy = ", acc2))
+```
+
+### Radial Kernel
+```{r}
+svm3 <- tune(svm, copyist~., data=val, kernel="radial", ranges=list(cost=c(1, 10, 100), gamma=c(0.1, 0.25, 0.5)))
+summary(svm3)
+pred3 <- predict(svm3$best.model, newdata=test)
+acc3 <- mean(pred3==test$copyist)
+print(paste("accuracy = ", acc3))
+```
+
+## Analysis
+The linear kernel had the worst performance out of the three kernels with an accuracy of 0.5527, when using C=10 (cost hyperparameter/slack). When tuning for the most optimal cost hyperparameter, we discovered that 10 generated the highest correlation because lower slack values prevent underfitting and reduce bias. The linear SVM kernel was not suitable for this dataset because the classes are not linearly separable. This explains why the accuracy was so low for the linear kernel algorithm. The polynomial kernel had a slightly improved performance with an accuracy of 0.5858, when C=150. A slack of 150 produced the highest accuracy for this kernel because larger slack values reduce overfitting and variance. The polynomial kernel algorithm was more accurate because the polynomial kernel maps the observations to a higher dimensional space. The radial kernel had the best performance with 0.6649 for accuracy, when C=100 and gamma=0.1. The additional hyperparameter, gamma, controls the bias-variance tradeoff, which allows for even higher accuracy when tuned to find the best value.

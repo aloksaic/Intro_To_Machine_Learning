@@ -1,0 +1,130 @@
+---
+title: "Regression"
+author: "Aloksai Choudari, Alekhya Pinnamaneni"
+date: "2022-10-17"
+output: 
+  pdf_document: default
+  html_document:
+    df_print: paged
+editor_options:
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Select a data set
+Data set: Power Consumption of Tetouan city
+
+Source: <https://archive.ics.uci.edu/ml/datasets/Power+consumption+of+Tetouan+city#>
+
+Attributes:
+DateTime, Temperature, Humidity, Wind Speed, general diffuse flows, diffuse flows, Zone 1 Power Consumption, Zone 2 Power Consumption, Zone 3 Power Consumption
+
+No. of instances (rows): 52,417 rows
+
+## Load the data
+```{r}
+power <- read.csv("power.csv")
+```
+
+## Clean the data
+```{r}
+# Remove the DateTime column
+power <- power[-c(1)]
+
+# Sum the last 3 columns into one target column 'Total Power Consumption'
+power$Total.Power.Consumption <- power$Zone.1.Power.Consumption + power$Zone.2..Power.Consumption + power$Zone.3..Power.Consumption
+power <- power[-c(6:8)]
+```
+
+## Divide data into train, test, and validate sets
+```{r}
+set.seed(1234)
+spec <- c(train=.7, test=.2, validate=.1)
+i <- sample(cut(1:nrow(power),
+                nrow(power)*cumsum(c(0,spec)), labels=names(spec)))
+train <- power[i=="train",]
+test <- power[i=="test",]
+val <- power[i=="validate",]
+```
+
+## Explore the data statistically and graphically
+```{r}
+# Outputs the first 5 rows of the train data
+head(train, n=5)
+
+# Outputs the mean temperature
+mean(train$Temperature)
+
+# Outputs the lowest and highest temperatures
+range(train$Temperature)
+
+# Outputs the mean humidity
+mean(train$Humidity)
+
+# Outputs the lowest and highest humidity
+range(train$Humidity)
+
+# Outputs the median humidity
+median(train$Humidity)
+
+# Outputs the mean wind speed
+mean(train$Wind.Speed)
+
+# Outputs statistics for Total Power Consumption
+summary(train$Total.Power.Consumption)
+```
+
+```{r}
+# Outputs a scatterplot of temperature vs. total power consumption
+plot(train$Temperature, train$Total.Power.Consumption, pch='+', cex=0.75, col="blue", xlab="Temperature", ylab="Total Power Consumption")
+```
+
+```{r}
+# Outputs a scatterplot of humidity vs. total power consumption
+plot(train$Humidity, train$Total.Power.Consumption, pch='+', cex=0.75, col="red", xlab="Humidity", ylab="Total Power Consumption")
+```
+
+## SVM Regression
+
+### Linear Kernel
+```{r}
+library(e1071)
+library(MASS)
+svm1 <- tune(svm, Total.Power.Consumption~., data=val, kernel="linear", ranges=list(cost=c(0.1, 10, 100)))
+summary(svm1)
+pred <- predict(svm1$best.model, newdata=test)
+cor_svm1 <- cor(pred, test$Total.Power.Consumption)
+print(paste("correlation = ", cor_svm1))
+mse_svm1 <- mean((pred - test$Total.Power.Consumption)^2)
+print(paste("mean squared error = ", mse_svm1))
+```
+
+### Polynomial Kernel
+```{r}
+svm2 <- tune(svm, Total.Power.Consumption~., data=val, kernel="polynomial", ranges=list(cost=c(0.1, 1, 10)))
+summary(svm2)
+pred2 <- predict(svm2$best.model, newdata=test)
+cor_svm2 <- cor(pred2, test$Total.Power.Consumption)
+print(paste("correlation = ", cor_svm2))
+mse_svm2 <- mean((pred2 - test$Total.Power.Consumption)^2)
+print(paste("mean squared error = ", mse_svm2))
+```
+
+### Radial Kernel
+```{r}
+library(e1071)
+library(MASS)
+svm3 <- tune(svm, Total.Power.Consumption~., data=val, kernel="radial", ranges=list(cost=c(1, 10, 100), gamma=c(0.25, 1, 2)))
+summary(svm3)
+pred3 <- predict(svm3$best.model, newdata=test)
+cor_svm3 <- cor(pred3, test$Total.Power.Consumption)
+print(paste("correlation = ", cor_svm3))
+mse_svm3 <- mean((pred3 - test$Total.Power.Consumption)^2)
+print(paste("mean squared error = ", mse_svm3))
+```
+
+## Analysis
+The linear kernel had the worst performance out of the three kernels with a correlation of 0.4968 and a mean squared error (mse) of 228,268,776, when using C=100 (cost hyperparameter/slack). When tuning for the most optimal cost hyperparameter, we discovered that 100 generated the highest correlation because higher slack values prevent overfitting and lower variance. The linear SVM kernel was not suitable for this dataset because the dataset does not have a linear relationship between the predictors and the target variable. This explains why the correlation was so low and the error was so high for the linear kernel algorithm. The polynomial kernel had a slightly improved performance with a correlation of 0.5346 and a mse of 214,612,699, when C=10. This is because the polynomial kernel maps the observations to a higher dimensional space, thus improving accuracy. The radial kernel had the best performance with 0.6104 for correlation and 188,455,666 for mse, when C=1 and gamma=2. The radial kernel has another hyperparamter: gamma. Gamma can be can be used to control the bias-variance tradeoff, which results in even higher accuracy.

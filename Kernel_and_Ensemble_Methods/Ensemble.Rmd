@@ -1,0 +1,141 @@
+---
+title: "Ensemble"
+author: "Aloksai Choudari, Alekhya Pinnamaneni"
+date: "2022-10-21"
+output: 
+  pdf_document: default
+  html_document:
+    df_print: paged
+editor_options:
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load the data
+```{r}
+avila <- read.csv("avila-tr.txt", header = FALSE)
+```
+
+## Clean the data
+```{r}
+# Add column names to the data set
+colnames(avila) <- c("intercolumnar_dist", "upper_margin", "lower_margin", "exploitation", "row_no", "modular_ratio", "interlinear_spacing", "weight", "peak_no", "ratio_spacing", "copyist")
+
+# Factor the copyist column
+avila$copyist <- as.factor(avila$copyist)
+```
+
+## Divide data into train, test, and validate sets
+```{r}
+set.seed(1234)
+sample <- sample(1:nrow(avila), nrow(avila)*0.8, replace=FALSE)
+train <- avila[sample,]
+test <- avila[-sample,]
+```
+
+## Decision Tree
+```{r}
+library(tree)
+library(mltools)
+start <- Sys.time()
+tree <- tree(copyist~., data=train)
+end <-Sys.time()
+rt <- end - start
+pred1 <- predict(tree, newdata=test, type="class")
+acc1 <- mean(pred1==test$copyist)
+print(paste("accuracy = ", acc1))
+mcc1 <- mcc(pred1, test$copyist)
+print(paste("MCC = ", mcc1))
+print(paste("Runtime: ", rt, " secs"))
+```
+
+## Random Forest
+```{r}
+library(randomForest)
+set.seed(1234)
+start <- Sys.time()
+rf <- randomForest(copyist~., data=train, importance=TRUE)
+end <-Sys.time()
+rt <- end - start
+pred2 <- predict(rf, newdata=test, type="response")
+acc2 <- mean(pred2==test$copyist)
+print(paste("accuracy = ", acc2))
+mcc2 <- mcc(pred2, test$copyist)
+print(paste("MCC = ", mcc2))
+print(paste("Runtime: ", rt, " secs"))
+```
+
+## XGBoost
+```{r}
+library(xgboost)
+train_label <- as.numeric(train$copyist) - 1
+start <- Sys.time()
+xgb <- xgboost(data=data.matrix(train[, -11]), label=train_label, nrounds=100, objective='multi:softprob', num_class=12)
+end <-Sys.time()
+rt <- end - start
+test_label <- as.numeric(test$copyist) - 1
+prob <- predict(xgb, data.matrix(test[, -11]))
+probs <- split(prob, ceiling(seq_along(prob) / 12))
+pred3 <- rep(0, 2086)
+for (x in 1:2086) {
+  if (probs[[x]][[2]] > 0.5) {
+    pred3[x] <- 1
+  }
+  else if (probs[[x]][[3]] > 0.5) {
+    pred3[x] <- 2
+  }
+  else if (probs[[x]][[4]] > 0.5) {
+    pred3[x] <- 3
+  }
+  else if (probs[[x]][[5]] > 0.5) {
+    pred3[x] <- 4
+  }
+  else if (probs[[x]][[6]] > 0.5) {
+    pred3[x] <- 5
+  }
+  else if (probs[[x]][[7]] > 0.5) {
+    pred3[x] <- 6
+  }
+  else if (probs[[x]][[8]] > 0.5) {
+    pred3[x] <- 7
+  }
+  else if (probs[[x]][[9]] > 0.5) {
+    pred3[x] <- 8
+  }
+  else if (probs[[x]][[10]] > 0.5) {
+    pred3[x] <- 9
+  }
+  else if (probs[[x]][[11]] > 0.5) {
+    pred3[x] <- 10
+  }
+  else if (probs[[x]][[12]] > 0.5) {
+    pred3[x] <- 11
+  }
+}
+acc3 <- mean(pred3==test_label)
+print(paste("accuracy = ", acc3))
+mcc3 <- mcc(pred3, test_label)
+print(paste("MCC = ", mcc3))
+print(paste("Runtime: ", rt, " secs"))
+```
+
+## Adabag
+```{r}
+library(adabag)
+start <- Sys.time()
+ada <- boosting(copyist~., data=train, boos=TRUE, mfinal=50, coeflearn='Breiman')
+end <-Sys.time()
+rt <- end - start
+pred4 <- predict(ada, newdata=test, type="response")
+acc4 <- mean(pred4$class==test$copyist)
+print(paste("accuracy = ", acc4))
+mcc4 <- mcc(factor(pred4$class), test$copyist)
+print(paste("MCC = ", mcc4))
+print(paste("Runtime: ", rt, " secs"))
+```
+
+## Analysis
+Out of all three of the ensemble techniques we used in this notebook, XGBoost had the best performance with an accuracy of 0.9966 and Matthew's correlation coefficient (MCC) of 0.9957. This is because we set the nrounds parameter equal to 100, creating 100 trees and resulting in increased accuracy. XGBoost also had the fastest runtime out of the three algorithms, since it uses multithreading. Adabag had the worst performance (accuracy = 0.6448, MCC = 0.5254), and only had slightly better results compared to the baseline decision tree algorithm (accuracy = 0.6059, MCC = 0.4849). Adabag also had the longest runtime. The random Forest algorithm also had excellent performance with an accuracy of 0.9808 and MCC of 0.9752. However, the runtime of the random forest algorithm was slightly longer than that of the XGBoost algorithm.
