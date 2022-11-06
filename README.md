@@ -18,3 +18,6 @@ This portfolio is the fourth section in ML in which we explored new methods of r
 
 ## Portfolio Component 5: Kernel and Ensemble Methods
 In this assignment, we performed machine learning on regression and classification datasets using SVM kernels and Ensemble techniques. This [report](./Kernel_and_Ensemble_Methods/Narrative.pdf) discusses SVM, the three types of kernels in SVM (linear, polynomial, and radial), and the ensemble techniques (Random Forest, XGBoost, and Adabag) used in this portfolio. The first [notebook](./Kernel_and_Ensemble_Methods/Regression.pdf) compares the results from using linear, polynomial, and radial SVM kernels on a regression dataset. The second [notebook](./Kernel_and_Ensemble_Methods/Classification.pdf) compares the results of using the three SVM kernels on a classification dataset. The third [notebook](./Kernel_and_Ensemble_Methods/Ensemble.pdf) conducts classification using Random Forest. XGBoost, and Adabag and compares the results to the Decision Tree algorithm.
+
+## Portfolio Component 6: ML with sklearn
+In this portfolio assignment, we gained some experience working with the sklearn library in Python to explore a small data set. This [pdf](./ML_with_sklearn/ml_with_sklearn.pdf) shows the work that was done with the three different classification algorithms from the sklearn library. 
