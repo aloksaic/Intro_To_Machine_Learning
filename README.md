@@ -21,3 +21,6 @@ In this assignment, we performed machine learning on regression and classificati
 
 ## Portfolio Component 6: ML with sklearn
 In this portfolio assignment, we gained some experience working with the sklearn library in Python to explore a small data set. This [pdf](./ML_with_sklearn/ml_with_sklearn.pdf) shows the work that was done with the three different classification algorithms from the sklearn library. 
+
+## Portfolio Component 7: Image Classification
+In this portfolio assignment, we worked with Keras for image classification and looked at different neural networks, specifically the reccurrent neural network (RNN). We gained experience with Tensorflow and deep learning models. This [pdf](./Image_Classification.pdf) shows the work that was done on Google Colab with image classification.
